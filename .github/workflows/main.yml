@@ -1,0 +1,32 @@
+# .github/workflows/main.yml
+
+name: CI-CD Pipeline for Brain Tumor Detection
+
+# Trigger the workflow on push events to the main branch
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Check out your repository code
+      - name: Check out repo
+        uses: actions/checkout@v3
+
+      # 2. Log in to Docker Hub
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # 3. Build and push the Docker image
+      # This step builds the image from your Dockerfile and pushes it to your Docker Hub repo
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/brain-tumor-detector:latest # Replace with your image name
