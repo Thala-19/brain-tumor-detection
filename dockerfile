@@ -18,7 +18,8 @@ WORKDIR /app
 
 # Copy the requirements file and install dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt \
+    && pip install --no-cache-dir --upgrade typing_extensions
 
 # Copy the 'app' directory from your local machine to the container's /app directory
 COPY ./app /app
