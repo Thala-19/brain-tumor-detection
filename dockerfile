@@ -5,7 +5,7 @@ FROM python:3.10-slim
 
 # Install system dependencies for building some Python packages
 RUN apt-get update && apt-get install -y --no-install-recommends build-essential \
-    && rm -rf /var/lib/apt/lists/*
+    libgl1-mesa-glx && rm -rf /var/lib/apt/lists/*
 
 # Set the working directory in the container
 WORKDIR /app
