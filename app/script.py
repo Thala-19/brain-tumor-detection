@@ -42,49 +42,17 @@ def mock_yolo_detection(pil_image, confidence_threshold):
             detections.append({
                 "box": [box_x, box_y, box_w, box_h],
                 "confidence": confidence,
-                # --- MODIFICATION ---
-                # Simulate different tumor types, since your model can do this.
                 "class": random.choice(["Glioma", "Meningioma", "Pituitary"])
-                # ---
             })
             
     return detections
 
-# --- Real Model Function (Your TODO) ---
+# --- Real Model Function ---
 def run_real_yolo_detection(pil_image, confidence_threshold):
-    """
-    <<< YOUR CODE GOES HERE >>>
-    
-    This is where you'll load and run your actual YOLOv11 model.
-    
-    1. Load your model (you might want to cache this with @st.cache_resource)
-       # from ultralytics import YOLO
-       # model = YOLO('yolov11n.pt') 
-       
-    2. Run prediction
-       # results = model(pil_image, conf=confidence_threshold)
-       
-    3. Process results and return them in the same format as the mock function.
-       # detections = []
-       # for r in results:
-       #     for box in r.boxes:
-       #         x1, y1, x2, y2 = box.xyxy[0]
-       #         detections.append({
-       #             "box": [int(x1), int(y1), int(x2-x1), int(y2-y1)],
-       #             "confidence": float(box.conf[0]),
-       #             # --- MODIFICATION ---
-       #             # Make sure to get the class name from your model
-       #             "class": model.names[int(box.cls[0])]
-       #             # ---
-       #         })
-       # return detections
-    """
-    # ---
-    # For now, we just call the mock function as a placeholder
-    # ---
-    # return mock_yolo_detection(pil_image, confidence_threshold)
-    #  1. Load your model (you might want to cache this with @st.cache_resource)
-    model = YOLO('runs/detect/train/weights/best.pt') 
+    @st.cache_resource
+    def load_model():
+        return YOLO('best.pt')
+    model = load_model()
        
     # 2. Run prediction
     results = model(pil_image, conf=confidence_threshold)
@@ -119,10 +87,7 @@ def draw_boxes_on_image(pil_image, detections):
         # Draw the rectangle
         draw.rectangle([x, y, x + w, y + h], outline="red", width=2)
         
-        # --- MODIFICATION ---
-        # Add text for class and confidence
         text = f"{det['class']}: {det['confidence']:.2f}"
-        # ---
         draw.text((x, y - 10), text, fill="red")
         
         # Calculate area
@@ -133,24 +98,12 @@ def draw_boxes_on_image(pil_image, detections):
 
 # --- MLOps Feedback Function ---
 def save_for_retraining(image_bytes, filename, notes):
-    """
-    <<< MLOps Hook >>>
-    
-    This function simulates the "feedback loop."
-    In a real app, this would save the image and its notes to the
-    '/new_data_for_training/' folder on your server for the
-    CT (Continuous Training) pipeline to find.
-    """
-    
     # Define the "staging" directory for new data
-    STAGING_PATH = "new_data_for_training" # Assumes this folder is in the same dir
+    STAGING_PATH = "new_data_for_training"
     
     if not os.path.exists(STAGING_PATH):
         os.makedirs(STAGING_PATH)
         
-    # Create a unique filename
-    # In a real app, you'd also save the corrected labels (from notes)
-    # in a corresponding .txt file in YOLO format.
     save_filename = f"{os.path.splitext(filename)[0]}_review.png"
     notes_filename = f"{os.path.splitext(filename)[0]}_review.txt"
     
@@ -192,10 +145,7 @@ with st.sidebar:
     
     # Quantitative Assessment Inputs
     st.subheader("Quantitative Assessment")
-    # --- MODIFICATION ---
-    # We no longer need slice_thickness, but pixel_spacing is critical for area.
     pixel_spacing = st.number_input("Pixel Spacing (mm/pixel)", min_value=0.1, value=0.5, step=0.01, help="The real-world size of a single pixel. Found in scan metadata.")
-    # ---
     
     st.markdown("---")
     
@@ -209,16 +159,11 @@ with st.sidebar:
 # --- Main Area (Results) ---
 main_area, = st.tabs(["Scan Analysis"])
 
-# --- Tab 1: Scan Analysis ---
 with main_area:
     if run_button and uploaded_files:
         st.header("Scan Analysis Results")
-        
-        # --- MODIFICATION ---
-        # We need to track the *maximum* area, not the total
         max_pixel_area_found = 0
         max_area_slice_name = "N/A"
-        # ---
         
         with st.spinner("Running AI analysis on all slices..."):
             
@@ -231,7 +176,6 @@ with main_area:
                 pil_image = Image.open(io.BytesIO(image_bytes))
 
                 # --- Run Detection ---
-                # This is the line you will change to use your real model
                 detections = run_real_yolo_detection(pil_image, confidence_threshold)
                 
                 # Draw boxes on the image
@@ -253,11 +197,9 @@ with main_area:
                     st.image(image_with_boxes, use_container_width=True)
                     
                     if detections:
-                        # --- MODIFICATION ---
                         # Report the types of tumors found on this slice
                         detected_classes = ", ".join(list(set([d['class'] for d in detections])))
                         st.caption(f"Detected: {detected_classes} | Total Area: {slice_area_pixels} px²")
-                        # ---
                     else:
                         st.caption("No tumor detected on this slice.")
                         
@@ -282,22 +224,16 @@ with main_area:
         # --- Final Report ---
         st.header("Quantitative Assessment Report")
         
-        # --- MODIFICATION ---
         # 1. Convert max pixel area to real area (mm²)
         max_area_mm2 = (pixel_spacing ** 2) * max_pixel_area_found
-        # ---
         
         st.metric(
-            # --- MODIFICATION ---
             label="**Estimated Maximum Tumor Area**",
             value=f"{max_area_mm2:.2f} mm²"
-            # ---
         )
         
-        # --- MODIFICATION ---
         st.info(f"The largest tumor cross-section was found on slice **{max_area_slice_name}**. "
                f"Calculation based on a pixel spacing of {pixel_spacing}mm/px.")
-        # ---
 
     elif run_button:
         st.error("Please upload MRI slices in the sidebar to begin.")
